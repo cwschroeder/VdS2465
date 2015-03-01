@@ -17,9 +17,9 @@ namespace LibVds.Proto
 
         private const int payloadStartIndex = 17;
 
-        public FrameTcp(ushort key, ushort length, byte[] input)
+        public FrameTcp(ushort keyNumber, ushort length, byte[] input)
         {
-            if (key == 0x0000)
+            if (keyNumber == 0x0000)
             {
                 // unsecured transmission
                 this.buffer = new byte[2 + 2 + length];
@@ -34,15 +34,15 @@ namespace LibVds.Proto
                 Array.Copy(input, 4, this.buffer, 4, length);
 
                 // decrypt buffer
-                if (!Session.AesKeyList.ContainsKey(key))
+                if (!SessionVdS.AesKeyList.ContainsKey(keyNumber))
                 {
-                    throw new Exception("Unknown key -> Return corresponding error frame");
+                    throw new Exception("Unknown KeyNumber -> Return corresponding error frame");
                 }
 
-                this.DecryptAes(Session.AesKeyList[key]);
+                this.DecryptAes(SessionVdS.AesKeyList[keyNumber]);
             }
 
-            this.Key = key;
+            this.KeyNumber = keyNumber;
             this.FrameLength = length;
         }
 
@@ -52,11 +52,12 @@ namespace LibVds.Proto
         /// <param name="sendCounter"></param>
         /// <param name="receiveCounter"></param>
         /// <param name="payload"></param>
-        public FrameTcp(uint sendCounter, uint receiveCounter, ushort key, params FrameVdS[] payload)
+        public FrameTcp(uint sendCounter, uint receiveCounter, ushort keyNumber, InformationId informationId, params FrameVdS[] payload)
         {
             // AES frames must be blocks of 16 bytes
-            var tmpLen = (payload.Sum(p => p.GetByteCount()) + 13) / 16.0;
-            var aesLength = (int)(Math.Ceiling(tmpLen) * 16);
+            //var tmpLen = (payload.Sum(p => p.GetByteCount()) + 13) / 16.0;
+            //var aesLength = (int)(Math.Ceiling(tmpLen) * 16);
+            var aesLength = 160;
             this.FillByteCount = aesLength - payload.Sum(p => p.GetByteCount() + 13);
 
             // K + SL + aesBuffer
@@ -67,12 +68,12 @@ namespace LibVds.Proto
             Array.Copy(payloadBytes, 0, this.buffer, 0 + 2 + 2 + 4 + 2 + 4 + 1 + 1 + 1, payloadBytes.Length);
 
 
-            this.Key = key;
+            this.KeyNumber = keyNumber;
             this.FrameLength = (ushort)(this.buffer.Length - 4);
 
             this.SendCounter = sendCounter;
             this.ReceiveCounter = receiveCounter;
-            this.InformationId = InformationId.Payload;
+            this.InformationId = informationId;
             this.ProtocolId = ProtocolId.VdS2465;
             this.PayloadLength = (byte)payloadBytes.Length;
 
@@ -80,7 +81,7 @@ namespace LibVds.Proto
             this.Checksum = this.CalculateCrc();
         }
 
-        public ushort Key
+        public ushort KeyNumber
         {
             get
             {
@@ -258,7 +259,7 @@ namespace LibVds.Proto
 
                 while (totalPayloadCnt < this.PayloadLength)
                 {
-                    var vds = new FrameVdS(this.buffer, payloadStartIndex, this.InformationId);
+                    var vds = new FrameVdS(this.buffer, payloadStartIndex + totalPayloadCnt, this.InformationId);
                     totalPayloadCnt += vds.GetByteCount();
                     payloadFrames.Add(vds);
                 }
@@ -277,7 +278,7 @@ namespace LibVds.Proto
 
         public static FrameTcp CreateSyncRequest(uint sendCounter, uint receiveCounter)
         {
-            var frame = new FrameTcp(sendCounter, receiveCounter, 0, FrameVdS.CreateSyncRequestResponse(InformationId.SyncReq))
+            var frame = new FrameTcp(sendCounter, receiveCounter, 0, InformationId.SyncReq, FrameVdS.CreateSyncRequestResponse(InformationId.SyncReq))
                             {
                                 InformationId = InformationId.SyncReq,
                                 SendCounter = sendCounter,
@@ -289,9 +290,9 @@ namespace LibVds.Proto
 
         public byte[] Serialize()
         {
-            if (this.Key != 0)
+            if (this.KeyNumber != 0)
             {
-                this.EncryptAes(Session.AesKeyList[this.Key]);
+                this.EncryptAes(SessionVdS.AesKeyList[this.KeyNumber]);
             }
 
             return this.buffer.ToArray();
@@ -302,6 +303,7 @@ namespace LibVds.Proto
             using (var aes = Aes.Create())
             {
                 aes.Mode = CipherMode.CBC;
+                aes.Padding = PaddingMode.None;
 
                 aes.Key = key;
                 aes.IV = new byte[16];
@@ -309,10 +311,9 @@ namespace LibVds.Proto
                 using (var ms = new MemoryStream())
                 using (var cs = new CryptoStream(ms, aes.CreateEncryptor(), CryptoStreamMode.Write))
                 {
-                    var input = this.buffer.Skip(4).Take(this.buffer.Length - 4 - this.FillByteCount).ToArray();
+                    var input = this.buffer.Skip(4).Take(this.buffer.Length - 4).ToArray();
                     Trace.WriteLine("Encrypting bytes: " + BitConverter.ToString(input));
                     cs.Write(input, 0, input.Length);
-
                     cs.FlushFinalBlock();
 
                     // overwrite buffer with encrypted data
@@ -328,6 +329,7 @@ namespace LibVds.Proto
             using (var aes = Aes.Create())
             {
                 aes.Mode = CipherMode.CBC;
+                aes.Padding = PaddingMode.None;
 
                 aes.Key = key;
                 aes.IV = new byte[16];
@@ -391,5 +393,19 @@ namespace LibVds.Proto
             return (ushort)sum;
         }
 
+        public override string ToString()
+        {
+            return string.Format(
+                "K: {0}, SL: {1}, TC: {2}, CRC: {3}, RC: {4}, IK: {5}, PK: {6}, L: {7}, DATA: {8}",
+                this.KeyNumber,
+                this.FrameLength,
+                this.SendCounter,
+                this.Checksum,
+                this.ReceiveCounter,
+                this.InformationId,
+                this.ProtocolId,
+                this.PayloadLength,
+                BitConverter.ToString(this.Payload.SelectMany(p => p.Serialize()).ToArray()));
+        }
     }
 }

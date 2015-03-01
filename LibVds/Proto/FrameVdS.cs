@@ -13,7 +13,7 @@ namespace LibVds.Proto
             if (this.InformationId == InformationId.Payload)
             {
                 var vdsLength = bytes[start];
-                this.buffer = new byte[vdsLength + 1];
+                this.buffer = new byte[vdsLength + 1 + 1];
                 Array.Copy(bytes, start, this.buffer, 0, this.buffer.Length);
             }
             else if (informationId == InformationId.SyncReq || informationId == InformationId.SyncRes)
@@ -38,7 +38,7 @@ namespace LibVds.Proto
                     throw new InvalidOperationException("VdsLength is only defined for payload frames");
                 }
 
-                return (byte)this.buffer.Length;
+                return (byte)this.buffer[0];
             }
         }
 
@@ -96,6 +96,27 @@ namespace LibVds.Proto
 
             var buff = new byte[0];
             return new FrameVdS(buff, 0, informationId);
+        }
+
+        public static FrameVdS CreatePayloadType02(byte device, byte address, byte addressAdd, byte addressExt, byte messageType)
+        {
+            var buff = new byte[]
+                           {
+                               0x00, (byte)VdSType.Meldung_Zustandsaenderung__Steuerung_mit_Quittungsanforderung, device,
+                               address, addressAdd, addressExt, messageType
+                           };
+            buff[0] = (byte)(buff.Length - 2);
+            return new FrameVdS(buff, 0, InformationId.Payload);
+        }
+
+        public static FrameVdS CreatePayloadType56(byte[] identBytes)
+        {
+            var buff = new byte[identBytes.Length + 2];
+            buff[0] = (byte)identBytes.Length;
+            buff[1] = (byte)VdSType.Identifikations_Nummer;
+            Array.Copy(identBytes, 0, buff, 2, identBytes.Length);
+
+            return new FrameVdS(buff, 0, InformationId.Payload);
         }
     }
 }
