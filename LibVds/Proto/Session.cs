@@ -1,9 +1,11 @@
 ﻿namespace LibVds.Proto
 {
+    using System.Collections.Concurrent;
     using System.Collections.Generic;
     using System.Security.Cryptography;
 
 
+    
     public class Session
     {
         // Current send counter, must be incremented with each new outgoing frame

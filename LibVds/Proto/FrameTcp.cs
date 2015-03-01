@@ -15,6 +15,8 @@ namespace LibVds.Proto
     {
         private readonly byte[] buffer;
 
+        private const int payloadStartIndex = 17;
+
         public FrameTcp(ushort key, ushort length, byte[] input)
         {
             if (key == 0x0000)
@@ -63,6 +65,7 @@ namespace LibVds.Proto
             // copy payload into buffer
             var payloadBytes = payload.SelectMany(p => p.Serialize()).ToArray();
             Array.Copy(payloadBytes, 0, this.buffer, 0 + 2 + 2 + 4 + 2 + 4 + 1 + 1 + 1, payloadBytes.Length);
+
 
             this.Key = key;
             this.FrameLength = (ushort)(this.buffer.Length - 4);
@@ -250,12 +253,39 @@ namespace LibVds.Proto
         {
             get
             {
-                var frame = new FrameVdS(this.buffer, 17, this.PayloadLength);
-                return new [] { frame };
+                var payloadFrames = new List<FrameVdS>();
+                var totalPayloadCnt = 0;
+
+                while (totalPayloadCnt < this.PayloadLength)
+                {
+                    var vds = new FrameVdS(this.buffer, payloadStartIndex, this.InformationId);
+                    totalPayloadCnt += vds.GetByteCount();
+                    payloadFrames.Add(vds);
+                }
+
+                return payloadFrames.ToArray();
             }
+
+            //set
+            //{
+            //    var payloadBuffer = value.SelectMany(p => p.Serialize()).ToArray();
+            //    Array.Copy(payloadBuffer, 0, this.buffer, payloadStartIndex, payloadBuffer.Length);
+            //}
         }
 
         private int FillByteCount { get; set; }
+
+        public static FrameTcp CreateSyncRequest(uint sendCounter, uint receiveCounter)
+        {
+            var frame = new FrameTcp(sendCounter, receiveCounter, 0, FrameVdS.CreateSyncRequestResponse(InformationId.SyncReq))
+                            {
+                                InformationId = InformationId.SyncReq,
+                                SendCounter = sendCounter,
+                                ReceiveCounter = receiveCounter
+                            };
+
+            return frame;
+        }
 
         public byte[] Serialize()
         {
