@@ -13,10 +13,18 @@ namespace ConsoleTest
 
     using LibVds.Proto;
 
+    using LibVdsModbus;
+
     class Program
     {
         static void Main(string[] args)
         {
+
+            Console.WriteLine("Start");
+            Driver.Read();
+
+
+            Console.ReadLine();
             var syncReq = FrameTcp.CreateSyncRequest(2107159040, 0);
             var syncRes = new FrameTcp(493594511, 2107159041, 12345, InformationId.SyncRes, FrameVdS.CreateSyncRequestResponse(InformationId.SyncRes));
 
