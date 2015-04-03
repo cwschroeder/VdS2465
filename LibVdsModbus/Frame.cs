@@ -1,13 +1,9 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-using System.Threading.Tasks;
-
-namespace LibVdsModbus
+﻿namespace LibVdsModbus
 {
+    using System;
+
     public class Frame
     {
-        
         private readonly ushort[] bytes;
 
         public Frame(ushort[] data)
@@ -19,7 +15,7 @@ namespace LibVdsModbus
 
             this.bytes = data;
         }
-        
+
         public bool Verbindungsaufbau_UE
         {
             get
@@ -129,8 +125,32 @@ namespace LibVdsModbus
         {
             return
                 string.Format(
-                    "Verbindungsaufbau UE: {0}, Übertragungsart: {1}, Zyklus Testmeldung: {2}, Allg. Meldung: {3}, Stoerung Batt: {4}, Erdschluss: {5}, Systemstoerung: {6}, FMBLSAUSVNB: {7}, FMBMSLS: {8}, Spannung: {9}, Strom: {10}, Leistung: {11}, LiveSig: {12}."
-                    , this.Verbindungsaufbau_UE, this.Uebertragungsart, this.Zyklus_Testmeldung, this.Allg_Meldung, this.Stoerung_Batterie, this.Erdschluss, this.Systemstoerung, this.Firmenspez_Meldung_Befehl_LS_AUS_VOM_NB, this.Firmenspez_Meldung_Stellung_LS, this.Spannung, this.Strom, this.Leistung, this.Live_Signal);
+                    "Verbindungsaufbau UE: {0}, "
+                    + "Übertragungsart: {1}, "
+                    + "Zyklus Testmeldung: {2}, "
+                    + "Allg. Meldung: {3}, "
+                    + "Stoerung Batt: {4}, "
+                    + "Erdschluss: {5}, "
+                    + "Systemstoerung: {6}, "
+                    + "FMBLSAUSVNB: {7}, "
+                    + "FMBMSLS: {8}, "
+                    + "Spannung: {9}, "
+                    + "Strom: {10}, "
+                    + "Leistung: {11}, "
+                    + "LiveSig: {12}.",
+                    this.Verbindungsaufbau_UE,
+                    this.Uebertragungsart,
+                    this.Zyklus_Testmeldung,
+                    this.Allg_Meldung,
+                    this.Stoerung_Batterie,
+                    this.Erdschluss,
+                    this.Systemstoerung,
+                    this.Firmenspez_Meldung_Befehl_LS_AUS_VOM_NB,
+                    this.Firmenspez_Meldung_Stellung_LS,
+                    this.Spannung,
+                    this.Strom,
+                    this.Leistung,
+                    this.Live_Signal);
         }
     }
 }

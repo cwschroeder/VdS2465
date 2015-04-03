@@ -19,12 +19,18 @@ namespace ConsoleTest
     {
         static void Main(string[] args)
         {
+            var half = new Half(23.5);
+            float test = half * 3;
+            Console.WriteLine("Half: " + test);
 
             Console.WriteLine("Start");
             Driver.Read();
 
 
             Console.ReadLine();
+            /*
+             * VDS Protocol
+             */
             var syncReq = FrameTcp.CreateSyncRequest(2107159040, 0);
             var syncRes = new FrameTcp(493594511, 2107159041, 12345, InformationId.SyncRes, FrameVdS.CreateSyncRequestResponse(InformationId.SyncRes));
 
