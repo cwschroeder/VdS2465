@@ -7,7 +7,7 @@ namespace LibVds.Proto
     {
         private readonly byte[] buffer;
 
-        public FrameVdS(byte[] bytes, int start, InformationId informationId)
+        public FrameVdS(byte[] bytes, int start, InformationId informationId = InformationId.Payload)
         {
             this.InformationId = informationId;
             if (this.InformationId == InformationId.Payload)

@@ -30,7 +30,7 @@ namespace LibVds.Proto
             }
 
             var stream = client.GetStream();
-            var session = new SessionVdS(stream, false, 0);
+            var session = new SessionVdS(stream, false, 3);
             session.Run();
             return session;
         }
