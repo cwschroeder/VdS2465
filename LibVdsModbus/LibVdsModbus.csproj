@@ -30,6 +30,10 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
+    <Reference Include="NLog, Version=3.2.0.0, Culture=neutral, PublicKeyToken=5120e14c03d0593c, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\packages\NLog.3.2.0.0\lib\net45\NLog.dll</HintPath>
+    </Reference>
     <Reference Include="NModbus4">
       <HintPath>..\packages\NModbus4.2.0.5548.32383\lib\net40\NModbus4.dll</HintPath>
     </Reference>
@@ -43,7 +47,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Driver.cs" />
-    <Compile Include="Frame.cs" />
+    <Compile Include="PlcFrame.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>

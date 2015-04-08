@@ -2,25 +2,25 @@
 {
     using System;
 
-    public class Frame
+    public class PlcFrame
     {
-        private readonly ushort[] bytes;
+        private readonly ushort[] registers;
 
-        public Frame(ushort[] data)
+        public PlcFrame(ushort[] data)
         {
             if (data == null || data.Length < 12)
             {
                 throw new ArgumentException();
             }
 
-            this.bytes = data;
+            this.registers = data;
         }
 
         public bool Verbindungsaufbau_UE
         {
             get
             {
-                return Convert.ToBoolean(this.bytes[0]);
+                return Convert.ToBoolean(this.registers[0]);
             }
         }
 
@@ -28,7 +28,7 @@
         {
             get
             {
-                return Convert.ToBoolean(this.bytes[1]);
+                return Convert.ToBoolean(this.registers[1]);
             }
         }
 
@@ -36,7 +36,7 @@
         {
             get
             {
-                return this.bytes[2];
+                return this.registers[2];
             }
         }
 
@@ -45,7 +45,7 @@
         {
             get
             {
-                return Convert.ToBoolean(this.bytes[3]);
+                return Convert.ToBoolean(this.registers[3]);
             }
         }
 
@@ -53,7 +53,7 @@
         {
             get
             {
-                return Convert.ToBoolean(this.bytes[4]);
+                return Convert.ToBoolean(this.registers[4]);
             }
         }
 
@@ -61,7 +61,7 @@
         {
             get
             {
-                return Convert.ToBoolean(this.bytes[5]);
+                return Convert.ToBoolean(this.registers[5]);
             }
         }
 
@@ -69,7 +69,7 @@
         {
             get
             {
-                return Convert.ToBoolean(this.bytes[6]);
+                return Convert.ToBoolean(this.registers[7]);
             }
         }
 
@@ -77,7 +77,7 @@
         {
             get
             {
-                return Convert.ToBoolean(this.bytes[7]);
+                return Convert.ToBoolean(this.registers[8]);
             }
         }
 
@@ -85,7 +85,7 @@
         {
             get
             {
-                return Convert.ToBoolean(this.bytes[8]);
+                return Convert.ToBoolean(this.registers[6]);
             }
         }
 
@@ -93,7 +93,7 @@
         {
             get
             {
-                return Convert.ToDouble(this.bytes[9]);
+                return Convert.ToDouble(this.registers[9]);
             }
         }
 
@@ -101,7 +101,7 @@
         {
             get
             {
-                return Convert.ToDouble(this.bytes[10]);
+                return Convert.ToDouble(this.registers[10]);
             }
         }
 
@@ -109,7 +109,7 @@
         {
             get
             {
-                return Convert.ToDouble(this.bytes[11]);
+                return Convert.ToDouble(this.registers[11]);
             }
         }
 
@@ -117,7 +117,7 @@
         {
             get
             {
-                return this.bytes[12];
+                return this.registers[12];
             }
         }
 

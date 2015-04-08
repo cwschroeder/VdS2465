@@ -1,3 +1,6 @@
+using System.Threading.Tasks;
+using NLog;
+
 namespace LibVdsModbus
 {
     using System;
@@ -10,26 +13,53 @@ namespace LibVdsModbus
 
     public static class Driver
     {
+        private static readonly Logger Log = LogManager.GetCurrentClassLogger();
+        private static IPEndPoint targetEndpoint;
+        private static TcpClient tcpClient;
         private static ModbusIpMaster master;
 
-        public static void Read()
+        public static PlcFrame Read(IPEndPoint endPoint)
         {
-            var tcpClient = new TcpClient();
-            tcpClient.Connect(new IPEndPoint(IPAddress.Parse("192.168.178.5"), 502));
-            master = ModbusIpMaster.CreateIp(tcpClient);
+            EnsureConnected(endPoint);
 
-            while (true)
+            var result = master.ReadInputRegisters(0, 15);
+            var frame = new PlcFrame(result);
+            Log.Debug(frame.ToString);
+            
+            return frame;
+        }
+
+        private static bool EnsureConnected(IPEndPoint endPoint)
+        {
+            if (tcpClient == null)
             {
-                var result = master.ReadInputRegisters(1, 15);
-                var frame = new Frame(result);
-                Console.WriteLine(frame.ToString());
-
-                master.WriteSingleRegister(1, 20, 1);
-
-                Thread.Sleep(3000);
+                tcpClient = new TcpClient();
             }
 
+            try
+            {
+                if (!endPoint.Equals(targetEndpoint))
+                {
+                    targetEndpoint = endPoint;
+                    if (tcpClient.Connected)
+                    {
+                        tcpClient.Close();
+                    }
+                }
 
+                if (!tcpClient.Connected)
+                {
+                    tcpClient.Connect(targetEndpoint);
+                    master = ModbusIpMaster.CreateIp(tcpClient);
+                }
+
+                return true;
+            }
+            catch (Exception ex)
+            {
+                Log.ErrorException("Connect failed", ex);
+                return false;
+            }
         }
     }
 }

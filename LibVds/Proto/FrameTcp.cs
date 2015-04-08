@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using NLog;
 
 namespace LibVds.Proto
 {
@@ -13,6 +14,7 @@ namespace LibVds.Proto
 
     public class FrameTcp
     {
+        private static readonly Logger Log = LogManager.GetCurrentClassLogger();
         private readonly byte[] buffer;
 
         private const int payloadStartIndex = 17;
@@ -312,13 +314,13 @@ namespace LibVds.Proto
                 using (var cs = new CryptoStream(ms, aes.CreateEncryptor(), CryptoStreamMode.Write))
                 {
                     var input = this.buffer.Skip(4).Take(this.buffer.Length - 4).ToArray();
-                    Trace.WriteLine("Encrypting bytes: " + BitConverter.ToString(input));
+                    Log.Trace("Encrypting bytes: " + BitConverter.ToString(input));
                     cs.Write(input, 0, input.Length);
                     cs.FlushFinalBlock();
 
                     // overwrite buffer with encrypted data
                     var encrypted = ms.ToArray();
-                    Trace.WriteLine("ENC: " + BitConverter.ToString(encrypted));
+                    Log.Trace("ENC: " + BitConverter.ToString(encrypted));
                     Array.Copy(encrypted, 0, this.buffer, 4, encrypted.Length);
                 }
             }
@@ -335,7 +337,7 @@ namespace LibVds.Proto
                 aes.IV = new byte[16];
 
                 var encrypted = this.buffer.Skip(4).ToArray();
-                Trace.WriteLine("Decrypting bytes: " + BitConverter.ToString(encrypted));
+                Log.Trace("Decrypting bytes: " + BitConverter.ToString(encrypted));
 
                 using (var ms = new MemoryStream())
                 using (var cs = new CryptoStream(ms, aes.CreateDecryptor(), CryptoStreamMode.Write))
@@ -343,7 +345,7 @@ namespace LibVds.Proto
                     cs.Write(encrypted, 0, encrypted.Length);
                     cs.FlushFinalBlock();
                     var decrypted = ms.ToArray();
-                    Trace.WriteLine("Decrypted bytes: " + BitConverter.ToString(decrypted));
+                    Log.Trace("Decrypted bytes: " + BitConverter.ToString(decrypted));
 
                     // overwrite buffer with encrypted data
                     Array.Clear(this.buffer, 4, this.buffer.Length - 4);

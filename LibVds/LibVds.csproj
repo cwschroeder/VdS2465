@@ -31,6 +31,9 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
+    <Reference Include="NLog">
+      <HintPath>..\packages\NLog.3.2.0.0\lib\net45\NLog.dll</HintPath>
+    </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />
     <Reference Include="System.Xml.Linq" />
@@ -40,7 +43,6 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Proto\Apdu\FrameVdS_02.cs" />
     <Compile Include="Proto\InformationId.cs" />
@@ -49,12 +51,14 @@
     <Compile Include="Proto\ProtocolId.cs" />
     <Compile Include="Proto\Server.cs" />
     <Compile Include="Proto\SessionVdS.cs" />
-    <Compile Include="Proto\Client.cs" />
+    <Compile Include="Proto\VdsClient.cs" />
     <Compile Include="Proto\VdSType.cs" />
     <Compile Include="Utils\Half.cs" />
     <Compile Include="Utils\HalfHelper.cs" />
   </ItemGroup>
-  <ItemGroup />
+  <ItemGroup>
+    <None Include="packages.config" />
+  </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.

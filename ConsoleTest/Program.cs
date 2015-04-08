@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using NLog;
 
 namespace ConsoleTest
 {
@@ -17,51 +18,111 @@ namespace ConsoleTest
 
     class Program
     {
+        private static readonly Logger Log = LogManager.GetLogger("Application");
+
+        private static PlcFrame storedFrame;
+        private static IPEndPoint vdsEndpoint = new IPEndPoint(IPAddress.Parse("176.94.30.165"), 9000);
+        private static string plcHostName = "zintl.selfhost.eu";
+
         static void Main(string[] args)
         {
-            var half = new Half(23.5);
-            float test = half * 3;
-            Console.WriteLine("Half: " + test);
-
-            Console.WriteLine("Start");
-            Driver.Read();
-
-
-            Console.ReadLine();
-            /*
-             * VDS Protocol
-             */
-            var syncReq = FrameTcp.CreateSyncRequest(2107159040, 0);
-            var syncRes = new FrameTcp(493594511, 2107159041, 12345, InformationId.SyncRes, FrameVdS.CreateSyncRequestResponse(InformationId.SyncRes));
-
-            var pollReq = new FrameTcp(
-                2107159041,
-                493594512,
-                12345,
-                InformationId.PollReqRes,
-                FrameVdS.CreateEmpty(InformationId.PollReqRes));
-
-            Trace.WriteLine("POLLREQ: " + BitConverter.ToString(pollReq.Serialize()));
-
             var cts = new CancellationTokenSource();
-            IPEndPoint endpoint = null;
-            endpoint= new IPEndPoint(IPAddress.Parse("176.94.30.165"), 9000);
             
-            //Server.Run(null, cts.Token);
-            //Thread.Sleep(200);
+            // setup connection to plc
+            var hosts = Dns.GetHostAddresses(plcHostName);
+            var plcEndpoint = new IPEndPoint(hosts[0], 502);
 
-            var clientSession = Client.Run(endpoint, cts.Token);
+            // setup connection to central station
+            var clientSession = VdsClient.Run(vdsEndpoint, cts.Token);
 
-            while (true)
+            while (!cts.IsCancellationRequested)
             {
-                //clientSession.AddMessage(FrameVdS.CreatePayloadType02(0x14, 0x03, 0x02, 0x01, 0x21));
-                clientSession.AddMessage(FrameVdS.CreatePayloadType56(new byte[] { 0x99, 0x99, 0x99 }));
-                clientSession.AddMessage(FrameVdS.CreatePayloadType02(0x14, 0x03, 0x02, 0x01, 0x21));
-                
-                Thread.Sleep(3000);
+                var readFrame = Driver.Read(plcEndpoint);
+                if (storedFrame == null)
+                {
+                    storedFrame = readFrame;
+                }
+
+                if (!clientSession.IsConnected)
+                {
+                    cts.Token.WaitHandle.WaitOne(3000);
+                    clientSession = VdsClient.Run(vdsEndpoint, cts.Token);
+                }
+
+                CheckAndHandleChanges(readFrame, clientSession);
+
+                cts.Token.WaitHandle.WaitOne(1000);
+            }
+            
+            Console.ReadLine();
+        }
+
+        private static void CheckAndHandleChanges(PlcFrame readFrame, SessionVdS clientSession)
+        {
+            if (clientSession.TransmitQueueLength == 0)
+            {
+                // Always send deviceno message in advance
+                clientSession.AddMessage(FrameVdS.CreateIdentificationNumberMessage());    
+            }
+            
+            // Check and handle changes...
+            if (storedFrame.Allg_Meldung != readFrame.Allg_Meldung)
+            {
+                var frame = FrameVdS.CreateChangeMessageCommon(readFrame.Allg_Meldung);
+                clientSession.AddMessage(frame);
             }
 
-            Console.ReadLine();
+            if (storedFrame.Stoerung_Batterie != readFrame.Stoerung_Batterie)
+            {
+                var frame = FrameVdS.CreateChangeMessageBatteryFault(readFrame.Stoerung_Batterie);
+                clientSession.AddMessage(frame);
+            }
+
+            if (storedFrame.Erdschluss != readFrame.Erdschluss)
+            {
+                var frame = FrameVdS.CreateChangeMessageGroundFault(readFrame.Erdschluss);
+                clientSession.AddMessage(frame);
+            }
+
+            if (storedFrame.Systemstoerung != readFrame.Systemstoerung)
+            {
+                var frame = FrameVdS.CreateChangeMessageSystemFault();
+                clientSession.AddMessage(frame);
+            }
+
+            if (storedFrame.Firmenspez_Meldung_Befehl_LS_AUS_VOM_NB != readFrame.Firmenspez_Meldung_Befehl_LS_AUS_VOM_NB)
+            {
+                var frame = FrameVdS.CreateChangeMessageLS_SwitchedOff();
+                clientSession.AddMessage(frame);
+            }
+
+            if (storedFrame.Firmenspez_Meldung_Stellung_LS != readFrame.Firmenspez_Meldung_Stellung_LS)
+            {
+                var frame = FrameVdS.CreateChangeMessageState_LS(readFrame.Firmenspez_Meldung_Stellung_LS);
+                clientSession.AddMessage(frame);
+            }
+
+            // Check and handle values
+            const double EPSILON = 0.05;
+            if (Math.Abs(storedFrame.Spannung - readFrame.Spannung) > EPSILON)
+            {
+                var frame = FrameVdS.CreateMeasurementMessageVoltage(readFrame.Spannung);
+                clientSession.AddMessage(frame);
+            }
+
+            if (Math.Abs(storedFrame.Strom - readFrame.Strom) > EPSILON)
+            {
+                var frame = FrameVdS.CreateMeasurementMessageCurrent(readFrame.Strom);
+                clientSession.AddMessage(frame);
+            }
+
+            if (Math.Abs(storedFrame.Leistung - readFrame.Leistung) > EPSILON)
+            {
+                var frame = FrameVdS.CreateMeasurementMessagePower(readFrame.Leistung);
+                clientSession.AddMessage(frame);
+            }
+
+            storedFrame = readFrame;
         }
     }
 }

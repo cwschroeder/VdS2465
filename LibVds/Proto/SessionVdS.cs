@@ -1,4 +1,6 @@
-﻿namespace LibVds.Proto
+﻿using NLog;
+
+namespace LibVds.Proto
 {
     using System;
     using System.Collections.Concurrent;
@@ -12,6 +14,8 @@
 
     public class SessionVdS
     {
+        private static readonly Logger Log = LogManager.GetCurrentClassLogger();
+
         // Current send counter, must be incremented with each new outgoing frame
         public uint MySendCounter { get; private set; }
 
@@ -48,6 +52,13 @@
             }
         }
 
+        public bool IsConnected { get; private set; }
+
+        public int TransmitQueueLength
+        {
+            get { return this.transmitQueue.Count; }
+        }
+
         static SessionVdS()
         {
             using (var aes = Aes.Create())
@@ -80,7 +91,7 @@
             }
 
             this.MySendCounter = (uint)rnd.Next(1, 100);
-            Console.WriteLine("Session initialized with TC " + this.MySendCounter);
+            Log.Info("Session initialized with TC " + this.MySendCounter);
             this.Run();
         }
 
@@ -96,6 +107,7 @@
 
         public Task Run()
         {
+            this.IsConnected = true;
             var task = Task.Run(
                 () =>
                 {
@@ -103,21 +115,31 @@
                     var bytes = new List<byte>();
                     while (!this.cts.IsCancellationRequested)
                     {
-                        var bytesRead = this.stream.Read(rcvBuffer, 0, rcvBuffer.Length);
-                        if (bytesRead == 0)
+                        try
                         {
-                            Thread.Sleep(1000);
-                            continue;
-                        }
-                        if (bytesRead < 0)
-                        {
-                            this.Close();
-                            return;
-                        }
+                            var bytesRead = this.stream.Read(rcvBuffer, 0, rcvBuffer.Length);
+                            if (bytesRead == 0)
+                            {
+                                Thread.Sleep(500);
+                                continue;
+                            }
+                            if (bytesRead < 0)
+                            {
+                                this.Close();
+                                this.IsConnected = false;
+                                return;
+                            }
 
-                        for (int i = 0; i < bytesRead; i++)
+                            for (int i = 0; i < bytesRead; i++)
+                            {
+                                bytes.Add(rcvBuffer[i]);
+                            }
+                        }
+                        catch (IOException e)
                         {
-                            bytes.Add(rcvBuffer[i]);
+                            Log.ErrorException("IO Exception occured", e);
+                            this.IsConnected = false;
+                            return;
                         }
 
                         var tmp = bytes.ToArray();
@@ -127,12 +149,12 @@
                             var length = BitConverter.ToUInt16(tmp.Skip(2).Take(2).Reverse().ToArray(), 0);
                             if (tmp.Length < length + 4)
                             {
-                                Console.WriteLine("Incomplete frame, continue reading...");
+                                Log.Info("Incomplete frame, continue reading...");
                                 continue;
                             }
 
                             Array.Resize(ref tmp, length + 4);
-                            Trace.WriteLine("RECEIVED: " + BitConverter.ToString(tmp));
+                            Log.Trace("RECEIVED: " + BitConverter.ToString(tmp));
                             var frame = new FrameTcp(key, length, tmp);
                             bytes.RemoveRange(0, tmp.Length);
                             this.HandleReceived(frame);
@@ -145,7 +167,7 @@
 
         public void Close()
         {
-            Console.WriteLine("Closing session...");
+            Log.Info("Closing session...");
             this.cts.Cancel();
             this.stream.Close();
         }
@@ -180,28 +202,28 @@
 
         private void HandleReceived(FrameTcp tcpFrame)
         {
-            Console.WriteLine("{0} << {1}", this.Type, tcpFrame);
+            Log.Info("{0} << {1}", this.Type, tcpFrame);
             this.OtherSendCounter = tcpFrame.SendCounter;
             this.IncrementOtherSendCounter();
 
             switch (tcpFrame.InformationId)
             {
                 case InformationId.ErrorInformationIdUnknown:
-                    Console.WriteLine("Unknown information Id");
+                    Log.Warn("Unknown information Id");
                     break;
                 case InformationId.ErrorProtocolIdUnknown:
-                    Console.WriteLine("Unknown protocol Id");
+                    Log.Warn("Unknown protocol Id");
                     break;
                 case InformationId.SyncReq:
-                    Console.WriteLine("Sync request received");
+                    Log.Warn("Sync request received");
                     this.SendResponse(FrameVdS.CreateSyncRequestResponse(InformationId.SyncRes));
                     break;
                 case InformationId.SyncRes:
-                    Console.WriteLine("Sync response received");
+                    Log.Warn("Sync response received");
                     this.KeyNumber = tcpFrame.KeyNumber;
                     break;
                 case InformationId.PollReqRes:
-                    Console.WriteLine("Polling request/response received");
+                    Log.Warn("Polling request/response received");
                     if (isServer)
                     {
                         break;
@@ -224,32 +246,30 @@
                     }
                     else
                     {
-                        this.SendResponse(FrameVdS.CreateEmpty(InformationId.PollReqRes));    
+                        this.SendResponse(FrameVdS.CreateEmpty(InformationId.PollReqRes));
                     }
-
                     
-
 
                     break;
                 case InformationId.Payload:
-                    Console.WriteLine("Payload received");
+                    Log.Warn("Payload received");
+                    //this.SendResponse(FrameVdS.CreateEmpty(InformationId.Payload));
                     break;
                 default:
-                    Console.WriteLine("Invalid Information ID");
+                    Log.Warn("Invalid Information ID");
                     break;
             }
         }
 
         private void SendResponse(params FrameVdS[] frames)
         {
-
             var response = new FrameTcp(
                 this.MySendCounter,
                 this.OtherSendCounter,
                 this.KeyNumber,
                 frames[0].InformationId,
                 frames);
-            Console.WriteLine("{0} >> {1}", this.Type, response);
+            Log.Info("{0} >> {1}", this.Type, response);
 
             var buff = response.Serialize();
             this.stream.Write(buff, 0, buff.Length);
@@ -267,7 +287,7 @@
                        this.KeyNumber,
                        informationId,
                        FrameVdS.CreateSyncRequestResponse(InformationId.SyncReq));
-                    Console.WriteLine("{0} >> {1}", this.Type, syncReq);
+                    Log.Info("{0} >> {1}", this.Type, syncReq);
 
                     var syncReqbuff = syncReq.Serialize();
                     this.stream.Write(syncReqbuff, 0, syncReqbuff.Length);
@@ -282,7 +302,7 @@
                        this.KeyNumber,
                        informationId,
                        FrameVdS.CreateEmpty(InformationId.PollReqRes));
-                    Console.WriteLine("{0} >> {1}", this.Type, pollReq);
+                    Log.Info("{0} >> {1}", this.Type, pollReq);
 
                     var polReqBuff = pollReq.Serialize();
                     this.stream.Write(polReqBuff, 0, polReqBuff.Length);
