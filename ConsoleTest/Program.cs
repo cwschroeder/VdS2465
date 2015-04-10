@@ -38,10 +38,18 @@ namespace ConsoleTest
             while (!cts.IsCancellationRequested)
             {
                 var readFrame = Driver.Read(plcEndpoint);
+                if (readFrame == null)
+                {
+                    Log.Warn("Next retry of PLC readout starts in a few seconds...");
+                    cts.Token.WaitHandle.WaitOne(1000);
+                    continue;
+                }
+
                 if (storedFrame == null)
                 {
-                    storedFrame = readFrame;
+                    storedFrame = readFrame;    
                 }
+                
 
                 if (!clientSession.IsConnected)
                 {

@@ -20,13 +20,25 @@ namespace LibVdsModbus
 
         public static PlcFrame Read(IPEndPoint endPoint)
         {
-            EnsureConnected(endPoint);
+            if (!EnsureConnected(endPoint))
+            {
+                return null;
+            }
 
-            var result = master.ReadInputRegisters(0, 15);
-            var frame = new PlcFrame(result);
-            Log.Debug(frame.ToString);
-            
-            return frame;
+            try
+            {
+                var result = master.ReadInputRegisters(0, 15);
+                var frame = new PlcFrame(result);
+                Log.Debug(frame.ToString);
+
+                return frame;
+            }
+            catch (Exception ex)
+            {
+                Log.ErrorException("Read PLC failed", ex);
+                
+                return null;
+            }
         }
 
         private static bool EnsureConnected(IPEndPoint endPoint)
