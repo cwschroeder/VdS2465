@@ -18,9 +18,10 @@ namespace LibVdsModbus
         private static TcpClient tcpClient;
         private static ModbusIpMaster master;
 
-        public static PlcFrame Read(IPEndPoint endPoint)
+        public static PlcFrame Read(string plcHostName)
         {
-            if (!EnsureConnected(endPoint))
+            // setup connection to plc
+            if (!EnsureConnected(plcHostName))
             {
                 return null;
             }
@@ -41,7 +42,7 @@ namespace LibVdsModbus
             }
         }
 
-        private static bool EnsureConnected(IPEndPoint endPoint)
+        private static bool EnsureConnected(string hostname)
         {
             if (tcpClient == null)
             {
@@ -50,6 +51,13 @@ namespace LibVdsModbus
 
             try
             {
+                var hosts = Dns.GetHostAddresses(hostname);
+                if (hosts.Length == 0)
+                {
+                    return false;
+                }
+
+                var endPoint = new IPEndPoint(hosts[0], 502);
                 if (!endPoint.Equals(targetEndpoint))
                 {
                     targetEndpoint = endPoint;

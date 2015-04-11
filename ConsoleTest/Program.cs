@@ -28,16 +28,12 @@ namespace ConsoleTest
         {
             var cts = new CancellationTokenSource();
             
-            // setup connection to plc
-            var hosts = Dns.GetHostAddresses(plcHostName);
-            var plcEndpoint = new IPEndPoint(hosts[0], 502);
-
             // setup connection to central station
             var clientSession = VdsClient.Run(vdsEndpoint, cts.Token);
 
             while (!cts.IsCancellationRequested)
             {
-                var readFrame = Driver.Read(plcEndpoint);
+                var readFrame = Driver.Read(plcHostName);
                 if (readFrame == null)
                 {
                     Log.Warn("Next retry of PLC readout starts in a few seconds...");
@@ -49,9 +45,15 @@ namespace ConsoleTest
                 {
                     storedFrame = readFrame;    
                 }
-                
 
-                if (!clientSession.IsConnected)
+
+                if (clientSession.LastPollReqReceived > DateTime.MinValue && DateTime.Now - clientSession.LastPollReqReceived > TimeSpan.FromSeconds(30))
+                {
+                    Log.Warn("POLL REQUEST INTERVAL TIMED OUT, CANCELLING SESSION...");
+                    clientSession.Close();
+                }
+
+                if (!clientSession.IsActive)
                 {
                     cts.Token.WaitHandle.WaitOne(3000);
                     clientSession = VdsClient.Run(vdsEndpoint, cts.Token);
@@ -59,20 +61,14 @@ namespace ConsoleTest
 
                 CheckAndHandleChanges(readFrame, clientSession);
 
-                cts.Token.WaitHandle.WaitOne(1000);
+                cts.Token.WaitHandle.WaitOne(8000);
             }
             
             Console.ReadLine();
         }
 
         private static void CheckAndHandleChanges(PlcFrame readFrame, SessionVdS clientSession)
-        {
-            if (clientSession.TransmitQueueLength == 0)
-            {
-                // Always send deviceno message in advance
-                clientSession.AddMessage(FrameVdS.CreateIdentificationNumberMessage());    
-            }
-            
+        {            
             // Check and handle changes...
             if (storedFrame.Allg_Meldung != readFrame.Allg_Meldung)
             {

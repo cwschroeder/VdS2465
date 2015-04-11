@@ -15,7 +15,7 @@ namespace LibVds.Proto
     public class SessionVdS
     {
         private static readonly Logger Log = LogManager.GetCurrentClassLogger();
-
+        
         // Current send counter, must be incremented with each new outgoing frame
         public uint MySendCounter { get; private set; }
 
@@ -52,12 +52,14 @@ namespace LibVds.Proto
             }
         }
 
-        public bool IsConnected { get; private set; }
+        public bool IsActive { get; private set; }
 
         public int TransmitQueueLength
         {
             get { return this.transmitQueue.Count; }
         }
+
+        public DateTime LastPollReqReceived { get; private set; }
 
         static SessionVdS()
         {
@@ -107,7 +109,7 @@ namespace LibVds.Proto
 
         public Task Run()
         {
-            this.IsConnected = true;
+            this.IsActive = true;
             var task = Task.Run(
                 () =>
                 {
@@ -120,46 +122,50 @@ namespace LibVds.Proto
                             var bytesRead = this.stream.Read(rcvBuffer, 0, rcvBuffer.Length);
                             if (bytesRead == 0)
                             {
-                                Thread.Sleep(500);
+                                this.cts.Token.WaitHandle.WaitOne(500);
                                 continue;
                             }
                             if (bytesRead < 0)
                             {
-                                this.Close();
-                                this.IsConnected = false;
-                                return;
+                                break;
                             }
 
                             for (int i = 0; i < bytesRead; i++)
                             {
                                 bytes.Add(rcvBuffer[i]);
                             }
+
+                            var tmp = bytes.ToArray();
+                            if (tmp.Length > 4)
+                            {
+                                var key = BitConverter.ToUInt16(tmp.Take(2).Reverse().ToArray(), 0);
+                                var length = BitConverter.ToUInt16(tmp.Skip(2).Take(2).Reverse().ToArray(), 0);
+                                if (tmp.Length < length + 4)
+                                {
+                                    Log.Info("Incomplete frame, continue reading...");
+                                    continue;
+                                }
+
+                                Array.Resize(ref tmp, length + 4);
+                                Log.Trace("RECEIVED: " + BitConverter.ToString(tmp));
+                                var frame = new FrameTcp(key, length, tmp);
+                                bytes.RemoveRange(0, tmp.Length);
+                                this.HandleReceived(frame);
+                            }
                         }
                         catch (IOException e)
                         {
                             Log.ErrorException("IO Exception occured", e);
-                            this.IsConnected = false;
-                            return;
+                            break;
                         }
-
-                        var tmp = bytes.ToArray();
-                        if (tmp.Length > 4)
+                        catch (Exception ex)
                         {
-                            var key = BitConverter.ToUInt16(tmp.Take(2).Reverse().ToArray(), 0);
-                            var length = BitConverter.ToUInt16(tmp.Skip(2).Take(2).Reverse().ToArray(), 0);
-                            if (tmp.Length < length + 4)
-                            {
-                                Log.Info("Incomplete frame, continue reading...");
-                                continue;
-                            }
-
-                            Array.Resize(ref tmp, length + 4);
-                            Log.Trace("RECEIVED: " + BitConverter.ToString(tmp));
-                            var frame = new FrameTcp(key, length, tmp);
-                            bytes.RemoveRange(0, tmp.Length);
-                            this.HandleReceived(frame);
+                            Log.ErrorException("Exception occured", ex);
+                            break;
                         }
                     }
+
+                    this.Close();
                 });
 
             return task;
@@ -169,7 +175,19 @@ namespace LibVds.Proto
         {
             Log.Info("Closing session...");
             this.cts.Cancel();
-            this.stream.Close();
+            
+            try
+            {
+                this.stream.Close();
+            }
+            catch (Exception exception)
+            {
+                Log.ErrorException("Error at closing session", exception);
+            }
+            finally
+            {
+                this.IsActive = false;
+            }
         }
 
         /// <summary>
@@ -224,6 +242,7 @@ namespace LibVds.Proto
                     break;
                 case InformationId.PollReqRes:
                     Log.Warn("Polling request/response received");
+                    this.LastPollReqReceived = DateTime.Now;
                     if (isServer)
                     {
                         break;
@@ -231,6 +250,7 @@ namespace LibVds.Proto
 
                     // client checks whether there is some data to transmit
                     var outFrames = new List<FrameVdS>();
+                    outFrames.Add(FrameVdS.CreateIdentificationNumberMessage());    //< always add device id as first message
                     while (this.transmitQueue.Any())
                     {
                         FrameVdS outFrame;
@@ -253,7 +273,7 @@ namespace LibVds.Proto
                     break;
                 case InformationId.Payload:
                     Log.Warn("Payload received");
-                    //this.SendResponse(FrameVdS.CreateEmpty(InformationId.Payload));
+                    this.SendResponse(FrameVdS.CreateIdentificationNumberMessage());
                     break;
                 default:
                     Log.Warn("Invalid Information ID");
