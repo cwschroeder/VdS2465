@@ -1,14 +1,8 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using NLog;
-
-namespace ConsoleTest
+﻿namespace ConsoleTest
 {
-    using System.Diagnostics;
-    using System.IO;
+    using System;
+    using System.Collections.Generic;
+    using System.Linq;
     using System.Net;
     using System.Threading;
 
@@ -16,7 +10,9 @@ namespace ConsoleTest
 
     using LibVdsModbus;
 
-    class Program
+    using NLog;
+
+    public class Program
     {
         private static readonly Logger Log = LogManager.GetLogger("Application");
 
@@ -24,12 +20,11 @@ namespace ConsoleTest
         private static IPEndPoint vdsEndpoint = new IPEndPoint(IPAddress.Parse("176.94.30.165"), 9000);
         private static string plcHostName = "zintl.selfhost.eu";
 
+        private static SessionVdS clientSession;
+
         static void Main(string[] args)
         {
             var cts = new CancellationTokenSource();
-            
-            // setup connection to central station
-            var clientSession = VdsClient.Run(vdsEndpoint, cts.Token);
 
             while (!cts.IsCancellationRequested)
             {
@@ -43,90 +38,94 @@ namespace ConsoleTest
 
                 if (storedFrame == null)
                 {
-                    storedFrame = readFrame;    
+                    storedFrame = readFrame;
                 }
 
-
-                if (clientSession.LastPollReqReceived > DateTime.MinValue && DateTime.Now - clientSession.LastPollReqReceived > TimeSpan.FromSeconds(30))
-                {
-                    Log.Warn("POLL REQUEST INTERVAL TIMED OUT, CANCELLING SESSION...");
-                    clientSession.Close();
-                }
-
-                if (!clientSession.IsActive)
-                {
-                    cts.Token.WaitHandle.WaitOne(3000);
-                    clientSession = VdsClient.Run(vdsEndpoint, cts.Token);
-                }
-
-                CheckAndHandleChanges(readFrame, clientSession);
+                CheckAndHandleChanges(readFrame, cts.Token);
 
                 cts.Token.WaitHandle.WaitOne(8000);
             }
-            
+
             Console.ReadLine();
         }
 
-        private static void CheckAndHandleChanges(PlcFrame readFrame, SessionVdS clientSession)
-        {            
+        private static void CheckAndHandleChanges(PlcFrame readFrame, CancellationToken token)
+        {
+            var frames = new List<FrameVdS>();
+
             // Check and handle changes...
             if (storedFrame.Allg_Meldung != readFrame.Allg_Meldung)
             {
-                var frame = FrameVdS.CreateChangeMessageCommon(readFrame.Allg_Meldung);
-                clientSession.AddMessage(frame);
+                frames.Add(FrameVdS.CreateChangeMessageCommon(readFrame.Allg_Meldung));
             }
 
             if (storedFrame.Stoerung_Batterie != readFrame.Stoerung_Batterie)
             {
-                var frame = FrameVdS.CreateChangeMessageBatteryFault(readFrame.Stoerung_Batterie);
-                clientSession.AddMessage(frame);
+                frames.Add(FrameVdS.CreateChangeMessageBatteryFault(readFrame.Stoerung_Batterie));
             }
 
             if (storedFrame.Erdschluss != readFrame.Erdschluss)
             {
-                var frame = FrameVdS.CreateChangeMessageGroundFault(readFrame.Erdschluss);
-                clientSession.AddMessage(frame);
+                frames.Add(FrameVdS.CreateChangeMessageGroundFault(readFrame.Erdschluss));
             }
 
             if (storedFrame.Systemstoerung != readFrame.Systemstoerung)
             {
-                var frame = FrameVdS.CreateChangeMessageSystemFault();
-                clientSession.AddMessage(frame);
+                frames.Add(FrameVdS.CreateChangeMessageSystemFault());
             }
 
             if (storedFrame.Firmenspez_Meldung_Befehl_LS_AUS_VOM_NB != readFrame.Firmenspez_Meldung_Befehl_LS_AUS_VOM_NB)
             {
-                var frame = FrameVdS.CreateChangeMessageLS_SwitchedOff();
-                clientSession.AddMessage(frame);
+                frames.Add(FrameVdS.CreateChangeMessageLS_SwitchedOff());
             }
 
             if (storedFrame.Firmenspez_Meldung_Stellung_LS != readFrame.Firmenspez_Meldung_Stellung_LS)
             {
-                var frame = FrameVdS.CreateChangeMessageState_LS(readFrame.Firmenspez_Meldung_Stellung_LS);
-                clientSession.AddMessage(frame);
+                frames.Add(FrameVdS.CreateChangeMessageState_LS(readFrame.Firmenspez_Meldung_Stellung_LS));
             }
 
             // Check and handle values
             const double EPSILON = 0.05;
             if (Math.Abs(storedFrame.Spannung - readFrame.Spannung) > EPSILON)
             {
-                var frame = FrameVdS.CreateMeasurementMessageVoltage(readFrame.Spannung);
-                clientSession.AddMessage(frame);
+                frames.Add(FrameVdS.CreateMeasurementMessageVoltage(readFrame.Spannung));
             }
 
             if (Math.Abs(storedFrame.Strom - readFrame.Strom) > EPSILON)
             {
-                var frame = FrameVdS.CreateMeasurementMessageCurrent(readFrame.Strom);
-                clientSession.AddMessage(frame);
+                frames.Add(FrameVdS.CreateMeasurementMessageCurrent(readFrame.Strom));
             }
 
             if (Math.Abs(storedFrame.Leistung - readFrame.Leistung) > EPSILON)
             {
-                var frame = FrameVdS.CreateMeasurementMessagePower(readFrame.Leistung);
-                clientSession.AddMessage(frame);
+                frames.Add(FrameVdS.CreateMeasurementMessagePower(readFrame.Leistung));
             }
 
             storedFrame = readFrame;
+
+            if (!frames.Any())
+            {
+                return;
+            }
+
+            if (clientSession == null)
+            {
+                // setup connection to central station
+                clientSession = VdsClient.Run(vdsEndpoint, token);                
+            }
+
+            foreach (var frame in frames)
+            {
+                clientSession.AddMessage(frame);
+            }
+
+            // wait for acknowledge
+            while (!token.IsCancellationRequested && !clientSession.IsAcked)
+            {
+                token.WaitHandle.WaitOne(TimeSpan.FromSeconds(10));
+            }
+
+            clientSession.Close();
         }
     }
 }

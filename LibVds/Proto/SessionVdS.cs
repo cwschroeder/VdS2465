@@ -32,15 +32,15 @@ namespace LibVds.Proto
 
         public int OtherAesLen { get; set; }
 
-        private Stream stream;
+        private readonly Stream stream;
 
-        private CancellationTokenSource cts;
+        private readonly CancellationTokenSource cts;
 
         public static Dictionary<ushort, byte[]> AesKeyList = new Dictionary<ushort, byte[]>();
 
-        private ConcurrentQueue<FrameVdS> transmitQueue = new ConcurrentQueue<FrameVdS>();
+        private readonly ConcurrentQueue<FrameVdS> transmitQueue = new ConcurrentQueue<FrameVdS>();
 
-        private bool isServer;
+        private readonly bool isServer;
 
         private static readonly Random rnd = new Random();
 
@@ -53,6 +53,8 @@ namespace LibVds.Proto
         }
 
         public bool IsActive { get; private set; }
+
+        public bool IsAcked { get; private set; }
 
         public int TransmitQueueLength
         {
@@ -257,6 +259,7 @@ namespace LibVds.Proto
                         if (this.transmitQueue.TryDequeue(out outFrame))
                         {
                             outFrames.Add(outFrame);
+                            this.IsAcked = false;
                         }
                     }
 
@@ -273,6 +276,10 @@ namespace LibVds.Proto
                     break;
                 case InformationId.Payload:
                     Log.Warn("Payload received");
+
+                    //TODO: check for ack
+                    this.IsAcked = true;
+
                     this.SendResponse(FrameVdS.CreateIdentificationNumberMessage());
                     break;
                 default:
