@@ -64,6 +64,16 @@ namespace LibVdsModbus
 
                 if (!tcpClient.Connected)
                 {
+                    try
+                    {
+                        tcpClient.Close();
+                    }
+                    catch (Exception)
+                    {
+                    }
+                    
+                    tcpClient = new TcpClient();
+
                     tcpClient.Connect(targetEndpoint);
                     master = ModbusIpMaster.CreateIp(tcpClient);
                 }
