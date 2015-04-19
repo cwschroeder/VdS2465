@@ -252,14 +252,22 @@ namespace LibVds.Proto
 
                     // client checks whether there is some data to transmit
                     var outFrames = new List<FrameVdS>();
-                    outFrames.Add(FrameVdS.CreateIdentificationNumberMessage());    //< always add device id as first message
-                    while (this.transmitQueue.Any())
+
+                    //< always add device id as first message
+                    outFrames.Add(FrameVdS.CreateIdentificationNumberMessage());    
+
+                    if (this.transmitQueue.Any())
                     {
                         FrameVdS outFrame;
                         if (this.transmitQueue.TryDequeue(out outFrame))
                         {
                             outFrames.Add(outFrame);
                             this.IsAcked = false;
+                            this.SendResponse(outFrames.ToArray());
+                        }
+                        else
+                        {
+                            throw new ApplicationException("Queue Error");
                         }
                     }
 

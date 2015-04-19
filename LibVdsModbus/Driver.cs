@@ -1,15 +1,10 @@
-using System.Threading.Tasks;
-using NLog;
-
 namespace LibVdsModbus
 {
     using System;
-    using System.Linq;
     using System.Net;
     using System.Net.Sockets;
-    using System.Threading;
-
     using Modbus.Device;
+    using NLog;
 
     public static class Driver
     {
