@@ -1,4 +1,5 @@
-﻿using NLog;
+﻿using LibVds.Proto.Apdu;
+using NLog;
 
 namespace LibVds.Proto
 {
@@ -107,6 +108,24 @@ namespace LibVds.Proto
             }
 
             this.transmitQueue.Enqueue(frame);
+        }
+
+        public bool WaitForAcknowledge(CancellationToken token, TimeSpan timeout)
+        {
+            var timeoutCts = new CancellationTokenSource(timeout);
+            var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(this.cts.Token, timeoutCts.Token, token);
+            while (!linkedCts.IsCancellationRequested)
+            {
+                if (this.IsAcked)
+                {
+                    return true;
+                }
+
+                linkedCts.Token.WaitHandle.WaitOne(100);
+            }
+
+            Log.Error("Waiting for ACK failed");
+            return false;
         }
 
         public Task Run()
@@ -253,17 +272,16 @@ namespace LibVds.Proto
                     // client checks whether there is some data to transmit
                     var outFrames = new List<FrameVdS>();
 
-                    //< always add device id as first message
-                    outFrames.Add(FrameVdS.CreateIdentificationNumberMessage());    
-
                     if (this.transmitQueue.Any())
                     {
+                        //< always add device id as first message when data is transmitted
+                        outFrames.Add(FrameVdS.CreateIdentificationNumberMessage());    
+
                         FrameVdS outFrame;
                         if (this.transmitQueue.TryDequeue(out outFrame))
                         {
                             outFrames.Add(outFrame);
                             this.IsAcked = false;
-                            this.SendResponse(outFrames.ToArray());
                         }
                         else
                         {
@@ -285,10 +303,27 @@ namespace LibVds.Proto
                 case InformationId.Payload:
                     Log.Warn("Payload received");
 
-                    //TODO: check for ack
-                    this.IsAcked = true;
+                    foreach(var frame in tcpFrame.Payload)
+                    {
+                        // Handle received frames
+                        if (frame.VdsType == VdSType.Quittungsruecksendung)
+                        {
+                            
+                            var ackFrame = new FrameVdS_03(frame.Serialize(), 0);
+                            if (ackFrame.MessageType != 0x00)
+                            {
+                                //TODO: check for ack
+                            }
 
-                    this.SendResponse(FrameVdS.CreateIdentificationNumberMessage());
+                            Log.Info("ACK received");
+                            this.IsAcked = true;    
+                        }
+                        else
+                        {
+                            throw new NotImplementedException("Only Quittungsruecksendung supported");
+                        }
+                    }
+
                     break;
                 default:
                     Log.Warn("Invalid Information ID");

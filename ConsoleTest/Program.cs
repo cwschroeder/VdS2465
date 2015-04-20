@@ -1,4 +1,6 @@
-﻿namespace ConsoleTest
+﻿using System.Collections.Concurrent;
+
+namespace ConsoleTest
 {
     using System;
     using System.Collections.Generic;
@@ -16,11 +18,12 @@
     {
         private static readonly Logger Log = LogManager.GetLogger("Application");
 
-        private static PlcFrame storedFrame;
+        private static PlcFrame storedPlcFrame;
         private static IPEndPoint vdsEndpoint = new IPEndPoint(IPAddress.Parse("176.94.30.165"), 9000);
         private static string plcHostName = "zintl.selfhost.eu";
 
         private static SessionVdS clientSession;
+        private static ConcurrentQueue<FrameVdS> vdsFrames = new ConcurrentQueue<FrameVdS>(); 
 
         static void Main(string[] args)
         {
@@ -36,96 +39,100 @@
                     continue;
                 }
 
-                if (storedFrame == null)
+                if (storedPlcFrame == null)
                 {
-                    storedFrame = readFrame;
+                    storedPlcFrame = readFrame;
                 }
 
-                CheckAndHandleChanges(readFrame, cts.Token);
+                CreateVdsFrames(readFrame, cts.Token);
 
-                cts.Token.WaitHandle.WaitOne(8000);
+
+                // vds session mgmgt
+                while (vdsFrames.Any())
+                {
+                    if (clientSession == null)
+                    {
+                        // setup connection to central station
+                        clientSession = VdsClient.Run(vdsEndpoint, cts.Token);
+                    }
+
+                    FrameVdS vdsFrame;
+                    if (vdsFrames.TryDequeue(out vdsFrame))
+                    {
+                        clientSession.AddMessage(vdsFrame);
+                    }
+
+                    // wait for acknowledge
+                    if (!clientSession.WaitForAcknowledge(cts.Token, TimeSpan.FromSeconds(30)))
+                    {
+                        Log.Error("No ACK received - terminating session...");
+                        break;
+                    }                    
+                }
+
+                if (clientSession != null)
+                {
+                    clientSession.Close();
+                    clientSession = null;
+                }
+                
+                cts.Token.WaitHandle.WaitOne(1000);
             }
 
             Console.ReadLine();
         }
 
-        private static void CheckAndHandleChanges(PlcFrame readFrame, CancellationToken token)
+        private static void CreateVdsFrames(PlcFrame readFrame, CancellationToken token)
         {
-            var frames = new List<FrameVdS>();
-
             // Check and handle changes...
-            if (storedFrame.Allg_Meldung != readFrame.Allg_Meldung)
+            if (storedPlcFrame.Allg_Meldung != readFrame.Allg_Meldung)
             {
-                frames.Add(FrameVdS.CreateChangeMessageCommon(readFrame.Allg_Meldung));
+                vdsFrames.Enqueue(FrameVdS.CreateChangeMessageCommon(readFrame.Allg_Meldung));
             }
 
-            if (storedFrame.Stoerung_Batterie != readFrame.Stoerung_Batterie)
+            if (storedPlcFrame.Stoerung_Batterie != readFrame.Stoerung_Batterie)
             {
-                frames.Add(FrameVdS.CreateChangeMessageBatteryFault(readFrame.Stoerung_Batterie));
+                vdsFrames.Enqueue(FrameVdS.CreateChangeMessageBatteryFault(readFrame.Stoerung_Batterie));
             }
 
-            if (storedFrame.Erdschluss != readFrame.Erdschluss)
+            if (storedPlcFrame.Erdschluss != readFrame.Erdschluss)
             {
-                frames.Add(FrameVdS.CreateChangeMessageGroundFault(readFrame.Erdschluss));
+                vdsFrames.Enqueue(FrameVdS.CreateChangeMessageGroundFault(readFrame.Erdschluss));
             }
 
-            if (storedFrame.Systemstoerung != readFrame.Systemstoerung)
+            if (storedPlcFrame.Systemstoerung != readFrame.Systemstoerung)
             {
-                frames.Add(FrameVdS.CreateChangeMessageSystemFault());
+                vdsFrames.Enqueue(FrameVdS.CreateChangeMessageSystemFault());
             }
 
-            if (storedFrame.Firmenspez_Meldung_Befehl_LS_AUS_VOM_NB != readFrame.Firmenspez_Meldung_Befehl_LS_AUS_VOM_NB)
+            if (storedPlcFrame.Firmenspez_Meldung_Befehl_LS_AUS_VOM_NB != readFrame.Firmenspez_Meldung_Befehl_LS_AUS_VOM_NB)
             {
-                frames.Add(FrameVdS.CreateChangeMessageLS_SwitchedOff());
+                vdsFrames.Enqueue(FrameVdS.CreateChangeMessageLS_SwitchedOff());
             }
 
-            if (storedFrame.Firmenspez_Meldung_Stellung_LS != readFrame.Firmenspez_Meldung_Stellung_LS)
+            if (storedPlcFrame.Firmenspez_Meldung_Stellung_LS != readFrame.Firmenspez_Meldung_Stellung_LS)
             {
-                frames.Add(FrameVdS.CreateChangeMessageState_LS(readFrame.Firmenspez_Meldung_Stellung_LS));
+                vdsFrames.Enqueue(FrameVdS.CreateChangeMessageState_LS(readFrame.Firmenspez_Meldung_Stellung_LS));
             }
 
             // Check and handle values
             const double EPSILON = 0.05;
-            if (Math.Abs(storedFrame.Spannung - readFrame.Spannung) > EPSILON)
+            if (Math.Abs(storedPlcFrame.Spannung - readFrame.Spannung) > EPSILON)
             {
-                frames.Add(FrameVdS.CreateMeasurementMessageVoltage(readFrame.Spannung));
+                vdsFrames.Enqueue(FrameVdS.CreateMeasurementMessageVoltage(readFrame.Spannung));
             }
 
-            if (Math.Abs(storedFrame.Strom - readFrame.Strom) > EPSILON)
+            if (Math.Abs(storedPlcFrame.Strom - readFrame.Strom) > EPSILON)
             {
-                frames.Add(FrameVdS.CreateMeasurementMessageCurrent(readFrame.Strom));
+                vdsFrames.Enqueue(FrameVdS.CreateMeasurementMessageCurrent(readFrame.Strom));
             }
 
-            if (Math.Abs(storedFrame.Leistung - readFrame.Leistung) > EPSILON)
+            if (Math.Abs(storedPlcFrame.Leistung - readFrame.Leistung) > EPSILON)
             {
-                frames.Add(FrameVdS.CreateMeasurementMessagePower(readFrame.Leistung));
+                vdsFrames.Enqueue(FrameVdS.CreateMeasurementMessagePower(readFrame.Leistung));
             }
 
-            storedFrame = readFrame;
-
-            if (!frames.Any())
-            {
-                return;
-            }
-
-            if (clientSession == null)
-            {
-                // setup connection to central station
-                clientSession = VdsClient.Run(vdsEndpoint, token);                
-            }
-
-            foreach (var frame in frames)
-            {
-                clientSession.AddMessage(frame);
-            }
-
-            // wait for acknowledge
-            while (!token.IsCancellationRequested && !clientSession.IsAcked)
-            {
-                token.WaitHandle.WaitOne(TimeSpan.FromSeconds(10));
-            }
-
-            clientSession.Close();
+            storedPlcFrame = readFrame;
         }
     }
 }

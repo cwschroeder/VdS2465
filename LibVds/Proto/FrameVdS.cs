@@ -1,3 +1,4 @@
+using LibVds.Proto.Apdu;
 using NLog;
 using NLog.Fluent;
 
@@ -9,7 +10,7 @@ namespace LibVds.Proto
     public class FrameVdS
     {
         private static readonly Logger Log = LogManager.GetCurrentClassLogger();
-        private readonly byte[] buffer;
+        protected readonly byte[] buffer;
 
         public FrameVdS(byte[] bytes, int start, InformationId informationId = InformationId.Payload)
         {
@@ -124,7 +125,7 @@ namespace LibVds.Proto
         ///                                   --> weitere Details: S.31
         ///                           Bit3-0: Meldungskennung</param>
         /// <returns>A VDS frame</returns>
-        public static FrameVdS CreatePayloadType02(byte device, byte address, byte addressAdd, byte addressExt, byte messageType)
+        public static FrameVdS_02 CreatePayloadType02(byte device, byte address, byte addressAdd, byte addressExt, byte messageType)
         {
             var buff = new byte[]
                            {
@@ -137,7 +138,7 @@ namespace LibVds.Proto
                                messageType
                            };
             buff[0] = (byte)(buff.Length - 2);
-            return new FrameVdS(buff, 0, InformationId.Payload);
+            return new FrameVdS_02(buff, 0, InformationId.Payload);
         }
 
         /// <summary>
