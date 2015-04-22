@@ -1,7 +1,7 @@
-﻿namespace System
-{
-    using System.Runtime.InteropServices;
+﻿using System.Runtime.InteropServices;
 
+namespace LibVds.Utils
+{
     /// <summary>
     ///     Helper class for Half conversions and some low level operations.
     ///     This class is internally used in the Half class.

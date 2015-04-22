@@ -1,8 +1,9 @@
-﻿namespace System
-{
-    using System.Diagnostics;
-    using System.Globalization;
+﻿using System;
+using System.Diagnostics;
+using System.Globalization;
 
+namespace LibVds.Utils
+{
     /// <summary>
     ///     Represents a half-precision floating point number.
     /// </summary>

@@ -1,16 +1,11 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using NLog;
-
-namespace LibVds.Proto
+﻿namespace LibVds.Proto
 {
-    using System.Diagnostics;
+    using System;
+    using System.Collections.Generic;
     using System.IO;
-    using System.Net.Mime;
+    using System.Linq;
     using System.Security.Cryptography;
+    using NLog;
 
     public class FrameTcp
     {

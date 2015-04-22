@@ -7,7 +7,7 @@
     using System.Threading;
     using System.Threading.Tasks;
 
-    public class Server
+    public class VdSServer
     {
         public static void Run(IPEndPoint endPoint, CancellationToken token)
         {

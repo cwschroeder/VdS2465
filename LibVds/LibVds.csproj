@@ -21,6 +21,7 @@
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <RunCodeAnalysis>true</RunCodeAnalysis>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <DebugType>pdbonly</DebugType>
@@ -36,21 +37,18 @@
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />
-    <Reference Include="System.Xml.Linq" />
-    <Reference Include="System.Data.DataSetExtensions" />
-    <Reference Include="Microsoft.CSharp" />
-    <Reference Include="System.Data" />
-    <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Proto\Apdu\FrameVdS_02.cs" />
     <Compile Include="Proto\Apdu\FrameVdS_03.cs" />
+    <Compile Include="Proto\Apdu\FrameVdS_30.cs" />
+    <Compile Include="Proto\Apdu\FrameVds_56.cs" />
     <Compile Include="Proto\InformationId.cs" />
     <Compile Include="Proto\FrameTcp.cs" />
-    <Compile Include="Proto\FrameVdS.cs" />
+    <Compile Include="Proto\Apdu\FrameVdS.cs" />
     <Compile Include="Proto\ProtocolId.cs" />
-    <Compile Include="Proto\Server.cs" />
+    <Compile Include="Proto\VdSServer.cs" />
     <Compile Include="Proto\SessionVdS.cs" />
     <Compile Include="Proto\VdsClient.cs" />
     <Compile Include="Proto\VdSType.cs" />

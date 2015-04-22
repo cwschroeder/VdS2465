@@ -1,3 +1,5 @@
+using LibVds.Utils;
+
 namespace LibVds.Proto.Apdu
 {
     /// <summary>
@@ -9,7 +11,8 @@ namespace LibVds.Proto.Apdu
     /// </remarks>
     public class FrameVdS_03 : FrameVdS
     {
-        public FrameVdS_03(byte[] bytes, int start, InformationId informationId = InformationId.Payload) : base(bytes, start, informationId)
+        public FrameVdS_03(byte[] bytes, int start, InformationId informationId = InformationId.Payload)
+            : base(bytes, start, informationId)
         {
         }
 
