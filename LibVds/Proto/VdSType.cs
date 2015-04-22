@@ -22,7 +22,7 @@ namespace LibVds.Proto
         Information_zur_Meldungsweiterleitung=0x44,
         Durchschalten_des_Verbindungswegs = 0x48,
         Datum_Uhrzeit = 0x50,
-        Herstellerid = 0x51,
+        HerstellerId = 0x51,
         Kommunkationsadresse_S2 = 0x52,
         Kommunkationsadresse_S3 = 0x53,
         Ascii_Zeichenfolge = 0x54,

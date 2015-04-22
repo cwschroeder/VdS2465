@@ -46,7 +46,7 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Driver.cs" />
+    <Compile Include="PlcController.cs" />
     <Compile Include="PlcFrame.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>

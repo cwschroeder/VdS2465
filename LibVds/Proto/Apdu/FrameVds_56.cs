@@ -4,7 +4,8 @@ namespace LibVds.Proto.Apdu
 {
     public class FrameVdS_56 : FrameVdS
     {
-        public FrameVdS_56(byte[] bytes, int start, InformationId informationId = InformationId.Payload) : base(bytes, start, informationId)
+        public FrameVdS_56(byte[] bytes, int start, InformationId informationId = InformationId.Payload)
+            : base(bytes, start, informationId)
         {
         }
 

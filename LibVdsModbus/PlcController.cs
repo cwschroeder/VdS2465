@@ -9,7 +9,7 @@ namespace LibVdsModbus
     using Modbus.Device;
     using NLog;
 
-    public static class Driver
+    public static class PlcController
     {
         private static readonly Logger Log = LogManager.GetCurrentClassLogger();
         private static IPEndPoint targetEndpoint;

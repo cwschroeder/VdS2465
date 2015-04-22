@@ -31,7 +31,7 @@ namespace ConsoleTest
 
             while (!cts.IsCancellationRequested)
             {
-                var readFrame = Driver.Read(plcHostName);
+                var readFrame = PlcController.Read(plcHostName);
                 if (readFrame == null)
                 {
                     Log.Warn("Next retry of PLC readout starts in a few seconds...");
@@ -87,49 +87,49 @@ namespace ConsoleTest
             // Check and handle changes...
             if (storedPlcFrame.Allg_Meldung != readFrame.Allg_Meldung)
             {
-                vdsFrames.Enqueue(Driver.CreateChangeMessageCommon(readFrame.Allg_Meldung));
+                vdsFrames.Enqueue(PlcController.CreateChangeMessageCommon(readFrame.Allg_Meldung));
             }
 
             if (storedPlcFrame.Stoerung_Batterie != readFrame.Stoerung_Batterie)
             {
-                vdsFrames.Enqueue(Driver.CreateChangeMessageBatteryFault(readFrame.Stoerung_Batterie));
+                vdsFrames.Enqueue(PlcController.CreateChangeMessageBatteryFault(readFrame.Stoerung_Batterie));
             }
 
             if (storedPlcFrame.Erdschluss != readFrame.Erdschluss)
             {
-                vdsFrames.Enqueue(Driver.CreateChangeMessageGroundFault(readFrame.Erdschluss));
+                vdsFrames.Enqueue(PlcController.CreateChangeMessageGroundFault(readFrame.Erdschluss));
             }
 
             if (storedPlcFrame.Systemstoerung != readFrame.Systemstoerung)
             {
-                vdsFrames.Enqueue(Driver.CreateChangeMessageSystemFault());
+                vdsFrames.Enqueue(PlcController.CreateChangeMessageSystemFault());
             }
 
             if (storedPlcFrame.Firmenspez_Meldung_Befehl_LS_AUS_VOM_NB != readFrame.Firmenspez_Meldung_Befehl_LS_AUS_VOM_NB)
             {
-                vdsFrames.Enqueue(Driver.CreateChangeMessageLS_SwitchedOff());
+                vdsFrames.Enqueue(PlcController.CreateChangeMessageLS_SwitchedOff());
             }
 
             if (storedPlcFrame.Firmenspez_Meldung_Stellung_LS != readFrame.Firmenspez_Meldung_Stellung_LS)
             {
-                vdsFrames.Enqueue(Driver.CreateChangeMessageState_LS(readFrame.Firmenspez_Meldung_Stellung_LS));
+                vdsFrames.Enqueue(PlcController.CreateChangeMessageState_LS(readFrame.Firmenspez_Meldung_Stellung_LS));
             }
 
             // Check and handle values
             const double EPSILON = 0.05;
             if (Math.Abs(storedPlcFrame.Spannung - readFrame.Spannung) > EPSILON)
             {
-                vdsFrames.Enqueue(Driver.CreateMeasurementMessageVoltage(readFrame.Spannung));
+                vdsFrames.Enqueue(PlcController.CreateMeasurementMessageVoltage(readFrame.Spannung));
             }
 
             if (Math.Abs(storedPlcFrame.Strom - readFrame.Strom) > EPSILON)
             {
-                vdsFrames.Enqueue(Driver.CreateMeasurementMessageCurrent(readFrame.Strom));
+                vdsFrames.Enqueue(PlcController.CreateMeasurementMessageCurrent(readFrame.Strom));
             }
 
             if (Math.Abs(storedPlcFrame.Leistung - readFrame.Leistung) > EPSILON)
             {
-                vdsFrames.Enqueue(Driver.CreateMeasurementMessagePower(readFrame.Leistung));
+                vdsFrames.Enqueue(PlcController.CreateMeasurementMessagePower(readFrame.Leistung));
             }
 
             storedPlcFrame = readFrame;

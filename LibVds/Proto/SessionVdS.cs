@@ -276,6 +276,7 @@ namespace LibVds.Proto
                     {
                         //< always add device id as first message when data is transmitted
                         outFrames.Add(FrameVdS.CreateIdentificationNumberMessage());    
+                        outFrames.Add(FrameVdS.CreateHerstellerIdMessage());
 
                         FrameVdS outFrame;
                         if (this.transmitQueue.TryDequeue(out outFrame))

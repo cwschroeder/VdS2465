@@ -12,6 +12,7 @@ namespace LibVds.Proto
         private static readonly Logger Log = LogManager.GetCurrentClassLogger();
         protected readonly byte[] buffer;
         private static byte[] identBytes = new byte[] { 0x99, 0x99, 0x99 };
+        private static string herstellerId = "FIRMA TEST";
 
         public FrameVdS(byte[] bytes, int start, InformationId informationId = InformationId.Payload)
         {
@@ -107,6 +108,11 @@ namespace LibVds.Proto
         public static FrameVdS CreateIdentificationNumberMessage()
         {
             return FrameVdS_56.Create(identBytes);
+        }
+
+        public static FrameVdS CreateHerstellerIdMessage()
+        {
+            return FrameVdS_51.Create(herstellerId);
         }
     }
 }
