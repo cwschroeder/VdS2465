@@ -73,6 +73,7 @@ namespace ConsoleTest
 
                 if (clientSession != null)
                 {
+                    clientSession.Terminate(TimeSpan.FromSeconds(12));
                     clientSession.Close();
                     clientSession = null;
                 }

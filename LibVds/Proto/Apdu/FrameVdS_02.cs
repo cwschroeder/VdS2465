@@ -1,10 +1,10 @@
 namespace LibVds.Proto.Apdu
 {
     /// <summary>
-    /// Zustandsänderung, Steuerung mit Quittungsanforderung
+    /// Meldung Zustandsänderung, Steuerung mit Quittungsanforderung
     /// </summary>
     /// <remarks>
-    /// Mit diesem Satztyp werden Zustandsänderungen und Steuerbefehle übertragen, diue von der Empfängerseite eine Telegrammquittung (Typ 0x03) anfordern.
+    /// Mit diesem Satztyp werden Zustandsänderungen und Steuerbefehle übertragen, die von der Empfängerseite eine Telegrammquittung (Typ 0x03) anfordern.
     /// </remarks>
     public class FrameVdS_02 : FrameVdS
     {

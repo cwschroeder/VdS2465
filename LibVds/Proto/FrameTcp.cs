@@ -292,7 +292,7 @@
                 this.EncryptAes(SessionVdS.AesKeyList[this.KeyNumber]);
             }
 
-            return this.buffer.ToArray();
+            return this.buffer;
         }
 
         private void EncryptAes(byte[] key)

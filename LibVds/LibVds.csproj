@@ -11,6 +11,7 @@
     <AssemblyName>LibVds</AssemblyName>
     <TargetFrameworkVersion>v4.5</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
+    <TargetFrameworkProfile />
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <DebugSymbols>true</DebugSymbols>
@@ -22,6 +23,7 @@
     <WarningLevel>4</WarningLevel>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <RunCodeAnalysis>true</RunCodeAnalysis>
+    <Prefer32Bit>false</Prefer32Bit>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <DebugType>pdbonly</DebugType>
@@ -30,6 +32,7 @@
     <DefineConstants>TRACE</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
+    <Prefer32Bit>false</Prefer32Bit>
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="NLog">
@@ -42,10 +45,20 @@
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Proto\Apdu\FrameVdS_02.cs" />
     <Compile Include="Proto\Apdu\FrameVdS_03.cs" />
+    <Compile Include="Proto\Apdu\FrameVdS_04.cs" />
+    <Compile Include="Proto\Apdu\FrameVdS_10_A.cs" />
+    <Compile Include="Proto\Apdu\FrameVdS_10_B.cs" />
+    <Compile Include="Proto\Apdu\FrameVdS_11.cs" />
+    <Compile Include="Proto\Apdu\FrameVdS_20.cs" />
     <Compile Include="Proto\Apdu\FrameVdS_30.cs" />
+    <Compile Include="Proto\Apdu\FrameVdS_40.cs" />
+    <Compile Include="Proto\Apdu\FrameVdS_41_A.cs" />
+    <Compile Include="Proto\Apdu\FrameVdS_41_B.cs" />
     <Compile Include="Proto\Apdu\FrameVdS_51.cs" />
+    <Compile Include="Proto\Apdu\FrameVdS_54.cs" />
     <Compile Include="Proto\Apdu\FrameVdS_55.cs" />
     <Compile Include="Proto\Apdu\FrameVdS_56.cs" />
+    <Compile Include="Proto\Apdu\FrameVdS_FF.cs" />
     <Compile Include="Proto\InformationId.cs" />
     <Compile Include="Proto\FrameTcp.cs" />
     <Compile Include="Proto\Apdu\FrameVdS.cs" />

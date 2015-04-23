@@ -131,19 +131,22 @@ namespace LibVdsModbus
         public static FrameVdS CreateMeasurementMessageVoltage(double voltage)
         {
             Log.Debug("Create change message VOLTAGE with value {0}", voltage);
-            return FrameVdS_30.Create(0x01, 0x00, 0x00, 0x00, 0x21, voltage);
+            //return FrameVdS_30.Create(0x01, 0x00, 0x00, 0x00, 0x21, voltage);
+            return FrameVdS_54.Create(string.Format("Spannung geändert, neuer Wert: {0} V"));
         }
 
         public static FrameVdS CreateMeasurementMessageCurrent(double current)
         {
             Log.Debug("Create change message CURRENT with value {0}", current);
-            return FrameVdS_30.Create(0x01, 0x00, 0x00, 0x00, 0x31, current);
+            //return FrameVdS_30.Create(0x01, 0x00, 0x00, 0x00, 0x31, current);
+            return FrameVdS_54.Create(string.Format("Strom geändert, neuer Wert: {0} A"));
         }
 
         public static FrameVdS CreateMeasurementMessagePower(double power)
         {
             Log.Debug("Create change message POWER with value {0}", power);
-            return FrameVdS_30.Create(0x01, 0x00, 0x00, 0x00, 0x48, power);
+            //return FrameVdS_30.Create(0x01, 0x00, 0x00, 0x00, 0x48, power);
+            return FrameVdS_54.Create(string.Format("Leistung geändert, neuer Wert: {0} kW"));
         }
     }
 }

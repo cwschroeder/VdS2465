@@ -107,7 +107,26 @@ namespace LibVds.Proto
                 throw new ArgumentNullException("frame");
             }
 
+            this.IsAcked = false;
             this.transmitQueue.Enqueue(frame);
+        }
+
+        public bool WaitForTransmission(CancellationToken token, TimeSpan timeout)
+        {
+            var timeoutCts = new CancellationTokenSource(timeout);
+            var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(this.cts.Token, timeoutCts.Token, token);
+            while (!linkedCts.IsCancellationRequested)
+            {
+                if (!this.transmitQueue.Any())
+                {
+                    return true;
+                }
+
+                linkedCts.Token.WaitHandle.WaitOne(100);
+            }
+
+            Log.Error("Waiting for transmission failed");
+            return false;  
         }
 
         public bool WaitForAcknowledge(CancellationToken token, TimeSpan timeout)
@@ -192,13 +211,20 @@ namespace LibVds.Proto
             return task;
         }
 
+        public bool Terminate(TimeSpan timeout)
+        {
+            this.SendResponse(FrameVdS_FF.Create());
+            this.IsAcked = false;
+            return this.WaitForAcknowledge(cts.Token, timeout);
+        }
+
         public void Close()
         {
             Log.Info("Closing session...");
-            this.cts.Cancel();
-            
+
             try
             {
+                this.cts.Cancel();
                 this.stream.Close();
             }
             catch (Exception exception)
@@ -278,7 +304,6 @@ namespace LibVds.Proto
                         if (this.transmitQueue.TryDequeue(out outFrame))
                         {
                             outFrames.Add(outFrame);
-                            this.IsAcked = false;
 
                             //< always add device id and manuf id as last messages when data is transmitted
                             outFrames.Add(FrameVdS.CreateHerstellerIdMessage());
@@ -318,6 +343,10 @@ namespace LibVds.Proto
 
                             Log.Info("ACK received");
                             this.IsAcked = true;    
+                        }
+                        else if (frame.VdsType == VdSType.Verbindung_wird_nicht_mehr_benoetigt)
+                        {
+                            this.IsAcked = true;
                         }
                         else
                         {
