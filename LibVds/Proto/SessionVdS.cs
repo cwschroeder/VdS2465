@@ -274,15 +274,15 @@ namespace LibVds.Proto
 
                     if (this.transmitQueue.Any())
                     {
-                        //< always add device id as first message when data is transmitted
-                        outFrames.Add(FrameVdS.CreateIdentificationNumberMessage());    
-                        outFrames.Add(FrameVdS.CreateHerstellerIdMessage());
-
                         FrameVdS outFrame;
                         if (this.transmitQueue.TryDequeue(out outFrame))
                         {
                             outFrames.Add(outFrame);
                             this.IsAcked = false;
+
+                            //< always add device id and manuf id as last messages when data is transmitted
+                            outFrames.Add(FrameVdS.CreateHerstellerIdMessage());
+                            outFrames.Add(FrameVdS.CreateIdentificationNumberMessage());    
                         }
                         else
                         {
