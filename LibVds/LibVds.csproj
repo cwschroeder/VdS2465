@@ -44,7 +44,8 @@
     <Compile Include="Proto\Apdu\FrameVdS_03.cs" />
     <Compile Include="Proto\Apdu\FrameVdS_30.cs" />
     <Compile Include="Proto\Apdu\FrameVdS_51.cs" />
-    <Compile Include="Proto\Apdu\FrameVds_56.cs" />
+    <Compile Include="Proto\Apdu\FrameVdS_55.cs" />
+    <Compile Include="Proto\Apdu\FrameVdS_56.cs" />
     <Compile Include="Proto\InformationId.cs" />
     <Compile Include="Proto\FrameTcp.cs" />
     <Compile Include="Proto\Apdu\FrameVdS.cs" />

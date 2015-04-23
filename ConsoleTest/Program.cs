@@ -1,4 +1,5 @@
 ﻿using System.Collections.Concurrent;
+using LibVds.Proto.Apdu;
 
 namespace ConsoleTest
 {
