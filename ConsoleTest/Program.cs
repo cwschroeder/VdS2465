@@ -47,7 +47,6 @@ namespace ConsoleTest
 
                 CreateVdsFrames(readFrame, cts.Token);
 
-
                 // vds session mgmgt
                 while (vdsFrames.Any())
                 {
@@ -121,17 +120,26 @@ namespace ConsoleTest
             const double EPSILON = 0.05;
             if (Math.Abs(storedPlcFrame.Spannung - readFrame.Spannung) > EPSILON)
             {
-                vdsFrames.Enqueue(PlcController.CreateMeasurementMessageVoltage(readFrame.Spannung));
+                foreach (var frame in PlcController.CreateMeasurementMessageVoltage(readFrame.Spannung))
+                {
+                    vdsFrames.Enqueue(frame);    
+                }
             }
 
             if (Math.Abs(storedPlcFrame.Strom - readFrame.Strom) > EPSILON)
             {
-                vdsFrames.Enqueue(PlcController.CreateMeasurementMessageCurrent(readFrame.Strom));
+                foreach (var frame in PlcController.CreateMeasurementMessageVoltage(readFrame.Strom))
+                {
+                    vdsFrames.Enqueue(frame);
+                }
             }
 
             if (Math.Abs(storedPlcFrame.Leistung - readFrame.Leistung) > EPSILON)
             {
-                vdsFrames.Enqueue(PlcController.CreateMeasurementMessagePower(readFrame.Leistung));
+                foreach (var frame in PlcController.CreateMeasurementMessageVoltage(readFrame.Leistung))
+                {
+                    vdsFrames.Enqueue(frame);
+                }
             }
 
             storedPlcFrame = readFrame;

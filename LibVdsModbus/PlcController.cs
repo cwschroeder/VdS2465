@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using LibVds.Proto;
 using LibVds.Proto.Apdu;
 
@@ -128,25 +129,31 @@ namespace LibVdsModbus
             return FrameVdS_02.Create(0x01, 0x00, 0x00, 0x00, isOn ? (byte)0x72 : (byte)0xF2);
         }
 
-        public static FrameVdS CreateMeasurementMessageVoltage(double voltage)
+        public static IEnumerable<FrameVdS> CreateMeasurementMessageVoltage(double voltage)
         {
             Log.Debug("Create change message VOLTAGE with value {0}", voltage);
+
+            yield return FrameVdS_02.Create(0x01, 0x00, 0x00, 0x00, (byte)0x73);
             //return FrameVdS_30.Create(0x01, 0x00, 0x00, 0x00, 0x21, voltage);
-            return FrameVdS_54.Create(string.Format("Spannung geändert, neuer Wert: {0} V", voltage));
+            yield return FrameVdS_54.Create(string.Format("Spannung geaendert, neuer Wert: ({0}) V", voltage));
         }
 
-        public static FrameVdS CreateMeasurementMessageCurrent(double current)
+        public static IEnumerable<FrameVdS> CreateMeasurementMessageCurrent(double current)
         {
             Log.Debug("Create change message CURRENT with value {0}", current);
+
+            yield return FrameVdS_02.Create(0x01, 0x00, 0x00, 0x00, (byte)0x73);
             //return FrameVdS_30.Create(0x01, 0x00, 0x00, 0x00, 0x31, current);
-            return FrameVdS_54.Create(string.Format("Strom geändert, neuer Wert: {0} A", current));
+            yield return FrameVdS_54.Create(string.Format("Strom geaendert, neuer Wert: ({0}) A", current));
         }
 
-        public static FrameVdS CreateMeasurementMessagePower(double power)
+        public static IEnumerable<FrameVdS> CreateMeasurementMessagePower(double power)
         {
             Log.Debug("Create change message POWER with value {0}", power);
+
+            yield return FrameVdS_02.Create(0x01, 0x00, 0x00, 0x00, (byte)0x73);
             //return FrameVdS_30.Create(0x01, 0x00, 0x00, 0x00, 0x48, power);
-            return FrameVdS_54.Create(string.Format("Leistung geändert, neuer Wert: {0} kW", power));
+            yield return FrameVdS_54.Create(string.Format("Leistung geaendert, neuer Wert: ({0}) kW", power));
         }
     }
 }
