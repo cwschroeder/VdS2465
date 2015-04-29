@@ -57,7 +57,7 @@ namespace ConsoleTest
                     }
 
                     FrameVdS vdsFrame;
-                    if (vdsFrames.TryDequeue(out vdsFrame))
+                    while (vdsFrames.TryDequeue(out vdsFrame))
                     {
                         clientSession.AddMessage(vdsFrame);
                     }

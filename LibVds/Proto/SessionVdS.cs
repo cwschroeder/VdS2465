@@ -16,7 +16,7 @@ namespace LibVds.Proto
     public class SessionVdS
     {
         private static readonly Logger Log = LogManager.GetCurrentClassLogger();
-        
+
         // Current send counter, must be incremented with each new outgoing frame
         public uint MySendCounter { get; private set; }
 
@@ -126,7 +126,7 @@ namespace LibVds.Proto
             }
 
             Log.Error("Waiting for transmission failed");
-            return false;  
+            return false;
         }
 
         public bool WaitForAcknowledge(CancellationToken token, TimeSpan timeout)
@@ -298,43 +298,50 @@ namespace LibVds.Proto
                     // client checks whether there is some data to transmit
                     var outFrames = new List<FrameVdS>();
 
-                    if (this.transmitQueue.Any())
-                    {
-                        FrameVdS outFrame;
-                        if (this.transmitQueue.TryDequeue(out outFrame))
-                        {
-                            outFrames.Add(outFrame);
-
-                            //< always add device id and manuf id as last messages when data is transmitted
-                            outFrames.Add(FrameVdS.CreateHerstellerIdMessage());
-                            outFrames.Add(FrameVdS.CreateIdentificationNumberMessage());    
-                        }
-                        else
-                        {
-                            throw new ApplicationException("Queue Error");
-                        }
-                    }
-
-                    if (outFrames.Any())
-                    {
-                        this.SendResponse(outFrames.ToArray());
-                    }
-                    else
+                    if (!this.transmitQueue.Any())
                     {
                         this.SendResponse(FrameVdS.CreateEmpty(InformationId.PollReqRes));
                     }
-                    
+
+                    FrameVdS outFrame;
+                    if (!this.transmitQueue.TryDequeue(out outFrame))
+                    {
+                        throw new NullReferenceException("Frame missing");
+                    }
+
+                    outFrames.Add(outFrame);
+                    var alertFrame = outFrame as FrameVdS_02;
+                    if (alertFrame != null)
+                    {
+                        // check for measurement value changed
+                        if (alertFrame.MessageType == 0x73)
+                        {
+                            // another message is expected in the queue to indicate which measurement value has changed
+                            if (!this.transmitQueue.TryDequeue(out outFrame))
+                            {
+                                throw new NullReferenceException("Text frame for measurement value change event is missing");
+                            }
+
+                            outFrames.Add(outFrame);
+                        }
+                    }
+
+                    //< always add device id and manuf id as last messages when data is transmitted
+                    outFrames.Add(FrameVdS.CreateHerstellerIdMessage());
+                    outFrames.Add(FrameVdS.CreateIdentificationNumberMessage());
+
+                    this.SendResponse(outFrames.ToArray());
 
                     break;
                 case InformationId.Payload:
                     Log.Warn("Payload received");
 
-                    foreach(var frame in tcpFrame.Payload)
+                    foreach (var frame in tcpFrame.Payload)
                     {
                         // Handle received frames
                         if (frame.VdsType == VdSType.Quittungsruecksendung)
                         {
-                            
+
                             var ackFrame = new FrameVdS_03(frame.Serialize(), 0);
                             if (ackFrame.MessageType != 0x00)
                             {
@@ -342,7 +349,7 @@ namespace LibVds.Proto
                             }
 
                             Log.Info("ACK received");
-                            this.IsAcked = true;    
+                            this.IsAcked = true;
                         }
                         else if (frame.VdsType == VdSType.Verbindung_wird_nicht_mehr_benoetigt)
                         {

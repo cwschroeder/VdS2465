@@ -32,6 +32,11 @@ namespace LibVds.Proto.Apdu
             get { return this.buffer[5]; }
         }
 
+        public byte MessageType
+        {
+            get { return this.buffer[6]; }
+        }
+
         /// <summary>
         /// Zustandsänderungen und Steuerbefehle die vom Empfänger eine Telegrammquittung Typ 0x03 anfordern.
         /// </summary>
