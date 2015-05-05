@@ -53,7 +53,27 @@ namespace LibVds.Proto
             }
         }
 
+        public SessionVdS(Stream stream, bool isServer, ushort keyNumber)
+        {
+            this.stream = stream;
+            this.cts = new CancellationTokenSource();
+            this.isServer = isServer;
+            this.MyAesLen = 160;
+            //this.OtherAesLen = 160;
+
+            if (!this.isServer)
+            {
+                this.KeyNumber = keyNumber;
+            }
+
+            this.MySendCounter = (uint)rnd.Next(1, 100);
+            Log.Info("Session initialized with TC " + this.MySendCounter);
+            this.Run();
+        }
+
         public bool IsActive { get; private set; }
+
+        public bool NeedsAck { get; set; }
 
         public bool IsAcked { get; private set; }
 
@@ -82,24 +102,6 @@ namespace LibVds.Proto
             }
         }
 
-        public SessionVdS(Stream stream, bool isServer, ushort keyNumber)
-        {
-            this.stream = stream;
-            this.cts = new CancellationTokenSource();
-            this.isServer = isServer;
-            this.MyAesLen = 160;
-            //this.OtherAesLen = 160;
-
-            if (!this.isServer)
-            {
-                this.KeyNumber = keyNumber;
-            }
-
-            this.MySendCounter = (uint)rnd.Next(1, 100);
-            Log.Info("Session initialized with TC " + this.MySendCounter);
-            this.Run();
-        }
-
         public void AddMessage(FrameVdS frame)
         {
             if (frame == null)
@@ -107,7 +109,12 @@ namespace LibVds.Proto
                 throw new ArgumentNullException("frame");
             }
 
-            this.IsAcked = false;
+            if (frame is FrameVdS_02)
+            {
+                this.NeedsAck = true;
+            }
+
+            this.IsAcked = false;  
             this.transmitQueue.Enqueue(frame);
         }
 
@@ -135,7 +142,7 @@ namespace LibVds.Proto
             var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(this.cts.Token, timeoutCts.Token, token);
             while (!linkedCts.IsCancellationRequested)
             {
-                if (this.IsAcked)
+                if (!this.NeedsAck || this.IsAcked)
                 {
                     return true;
                 }
@@ -311,23 +318,31 @@ namespace LibVds.Proto
 
                     outFrames.Add(outFrame);
                     var alertFrame = outFrame as FrameVdS_02;
-                    if (alertFrame != null)
+                    if (alertFrame != null && alertFrame.MessageType == 0x73)
                     {
                         // check for measurement value changed
-                        if (alertFrame.MessageType == 0x73)
+                        // another message is expected in the queue to indicate which measurement value has changed
+                        if (!this.transmitQueue.TryDequeue(out outFrame))
                         {
-                            // another message is expected in the queue to indicate which measurement value has changed
-                            if (!this.transmitQueue.TryDequeue(out outFrame))
-                            {
-                                throw new NullReferenceException("Text frame for measurement value change event is missing");
-                            }
-
-                            outFrames.Add(outFrame);
+                            throw new NullReferenceException("Text frame for measurement value change event is missing");
                         }
+
+                        var asciiFrame = outFrame as FrameVdS_54;
+                        if (asciiFrame == null)
+                        {
+                            throw new NullReferenceException();
+                        }
+
+                        // create a herstelleridmessage with text to report value change (customer idea!?!)
+                        FrameVdS.CreateHerstellerIdMessage(asciiFrame.Text);
+                        outFrames.Add(outFrame);
+                    }
+                    else
+                    {
+                        outFrames.Add(FrameVdS.CreateHerstellerIdMessage());
                     }
 
-                    //< always add device id and manuf id as last messages when data is transmitted
-                    outFrames.Add(FrameVdS.CreateHerstellerIdMessage());
+                    //< always add device id as last messages when data is transmitted
                     outFrames.Add(FrameVdS.CreateIdentificationNumberMessage());
 
                     this.SendResponse(outFrames.ToArray());
@@ -350,6 +365,7 @@ namespace LibVds.Proto
 
                             Log.Info("ACK received");
                             this.IsAcked = true;
+                            this.NeedsAck = false;
                         }
                         else if (frame.VdsType == VdSType.Verbindung_wird_nicht_mehr_benoetigt)
                         {

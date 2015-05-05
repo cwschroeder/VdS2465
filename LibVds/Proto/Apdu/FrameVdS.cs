@@ -114,5 +114,10 @@ namespace LibVds.Proto
         {
             return FrameVdS_51.Create(herstellerId);
         }
+
+        public static FrameVdS CreateHerstellerIdMessage(string text)
+        {
+            return FrameVdS_51.Create(text);
+        }
     }
 }
