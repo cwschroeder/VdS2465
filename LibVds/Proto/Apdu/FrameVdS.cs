@@ -110,6 +110,11 @@ namespace LibVds.Proto
             return FrameVdS_56.Create(identBytes);
         }
 
+        public static FrameVdS CreateIdentificationNumberMessage(long number)
+        {
+            return FrameVdS_56.Create(number);
+        }
+
         public static FrameVdS CreateHerstellerIdMessage()
         {
             return FrameVdS_51.Create(herstellerId);
